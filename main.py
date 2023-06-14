@@ -5,7 +5,9 @@ import numpy as np
 import pandas as pd
 import pytesseract
 
+# Khởi tạo đối tượng easyocr với các ngôn ngữ hỗ trợ là tiếng Việt và tiếng Anh
 reader = easyocr.Reader(['vi', 'en'])
+
 # Đặt đường dẫn tới tệp thực thi của Tesseract OCR
 config = '--psm 7 --oem 3'
 pytesseract.pytesseract.tesseract_cmd = "C:/Program Files/Tesseract-OCR/tesseract.exe"
@@ -14,7 +16,7 @@ pytesseract.pytesseract.tesseract_cmd = "C:/Program Files/Tesseract-OCR/tesserac
 file = "Image/test.png"
 img = cv2.imread(file, 0)
 
-# Tăng cường độ tương phản của ảnh
+# Tăng cường độ tương phản của ảnh sử dụng phương pháp CLAHE
 clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
 img_eq = clahe.apply(img)
 
@@ -33,25 +35,26 @@ plt.show()
 
 # Chiều dài của kernel là 1/100 chiều rộng tổng thể
 kernel_len = np.array(img).shape[1] // 100
-# Định nghĩa kernel dọc để phát hiện các đường dọc trong ảnh
-ver_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, kernel_len))
-# Định nghĩa kernel ngang để phát hiện các đường ngang trong ảnh
-hor_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (kernel_len, 1))
+
 # A kernel of 2x2
 kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
 
 # Sử dụng kernel dọc để phát hiện và lưu các đường dọc vào một tệp jpg
+ver_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, kernel_len))
 image_1 = cv2.erode(img_bin, ver_kernel, iterations=3)
 vertical_lines = cv2.dilate(image_1, ver_kernel, iterations=3)
 cv2.imwrite("Image/vertical.jpg", vertical_lines)
+
 # Hiển thị ảnh đã tạo
 plotting = plt.imshow(image_1, cmap='gray')
 plt.show()
 
 # Sử dụng kernel ngang để phát hiện và lưu các đường ngang vào một tệp jpg
+hor_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (kernel_len, 1))
 image_2 = cv2.erode(img_bin, hor_kernel, iterations=3)
 horizontal_lines = cv2.dilate(image_2, hor_kernel, iterations=3)
 cv2.imwrite("Image/horizontal.jpg", horizontal_lines)
+
 # Hiển thị ảnh đã tạo
 plotting = plt.imshow(image_2, cmap='gray')
 plt.show()
@@ -128,8 +131,6 @@ for i in range(len(box)):
             column = []
             previous = box[i]
             column.append(box[i])
-print('Cột: ', column)
-print('Hàng: ', row)
 
 # Tính số lượng ô tối đa
 countcol = 0
@@ -137,13 +138,11 @@ for i in range(len(row)):
     countcol = len(row[i])
     if countcol > countcol:
         countcol = countcol
-
+print(countcol)
 # Lấy tâm của mỗi cột
 center = [int(row[i][j][0] + row[i][j][2] / 2) for j in range(len(row[i])) if row[0]]
-
 center = np.array(center)
 center.sort()
-print('Tâm: ', center)
 
 # Dựa vào khoảng cách đến tâm cột, các hình chữ nhật được sắp xếp theo thứ tự tương ứng
 finalboxes = []
@@ -163,9 +162,12 @@ outer = []
 for i in range(len(finalboxes)):
     for j in range(len(finalboxes[i])):
         inner = ''
+
+        # Kiểm tra xem ô có rỗng hay không
         if len(finalboxes[i][j]) == 0:
             outer.append(' ')
         else:
+            # Lặp qua từng hình chữ nhật trong ô
             for k in range(len(finalboxes[i][j])):
                 y, x, w, h = finalboxes[i][j][k][0], finalboxes[i][j][k][1], finalboxes[i][j][k][2], \
                     finalboxes[i][j][k][3]
@@ -176,6 +178,8 @@ for i in range(len(finalboxes)):
                 dilation = cv2.dilate(resizing, kernel, iterations=1)
                 erosion = cv2.erode(dilation, kernel, iterations=2)
                 out = pytesseract.image_to_string(erosion, config=config)
+
+                # Kiểm tra xem kết quả có rỗng hay không
                 if len(out) == 0:
                     out = pytesseract.image_to_string(erosion, config=config)
                 inner = inner + ' ' + out
