@@ -138,9 +138,10 @@ for i in range(len(row)):
     countcol = len(row[i])
     if countcol > countcol:
         countcol = countcol
-print(countcol)
+
 # Lấy tâm của mỗi cột
 center = [int(row[i][j][0] + row[i][j][2] / 2) for j in range(len(row[i])) if row[0]]
+
 center = np.array(center)
 center.sort()
 
