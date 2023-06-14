@@ -1,9 +1,11 @@
 import cv2
+import easyocr
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pytesseract
 
+reader = easyocr.Reader(['vi', 'en'])
 # Đặt đường dẫn tới tệp thực thi của Tesseract OCR
 config = '--psm 7 --oem 3'
 pytesseract.pytesseract.tesseract_cmd = "C:/Program Files/Tesseract-OCR/tesseract.exe"
@@ -126,8 +128,8 @@ for i in range(len(box)):
             column = []
             previous = box[i]
             column.append(box[i])
-print(column)
-print(row)
+print('Cột: ', column)
+print('Hàng: ', row)
 
 # Tính số lượng ô tối đa
 countcol = 0
@@ -141,9 +143,9 @@ center = [int(row[i][j][0] + row[i][j][2] / 2) for j in range(len(row[i])) if ro
 
 center = np.array(center)
 center.sort()
-print(center)
-# Dựa vào khoảng cách đến tâm cột, các hình chữ nhật được sắp xếp theo thứ tự tương ứng
+print('Tâm: ', center)
 
+# Dựa vào khoảng cách đến tâm cột, các hình chữ nhật được sắp xếp theo thứ tự tương ứng
 finalboxes = []
 for i in range(len(row)):
     lis = []
@@ -179,29 +181,28 @@ for i in range(len(finalboxes)):
                 inner = inner + ' ' + out
             outer.append(inner)
 
-# Tạo DataFrame từ danh sách các chuỗi trích xuất
+# Tìm tọa độ cạnh ngang thứ nhất
+horizontal_sum = np.sum(image_2, axis=1)
+first_column_index = np.argmax(horizontal_sum)
+
+# Cắt ảnh phần thông tin thí sinh ra và lưu
+processed_image_path = "Image/cv_inverted.png"
+processed_image = cv2.imread(processed_image_path)
+cropped_image = processed_image[0:first_column_index, :]
+cropped_image_path = "Image/cropped_image.png"
+cv2.imwrite(cropped_image_path, cropped_image)
+
+# Đọc mã môn và mssv
+text = reader.readtext('Image/cropped_image.png', detail=0)
+ma_mon = text[2].split(":")[1].strip()
+mssv = text[4].split(":")[1].strip()
+
+# Tạo DataFrame từ danh sách chuỗi trích xuất và tạo chuỗi kết quả
 arr = np.array(outer)
 dataframe = pd.DataFrame(arr.reshape(len(row), countcol))
 dataframe.insert(0, ' ', range(len(dataframe)))
 print(dataframe.to_string(index=False))
 data = dataframe.style.set_properties(align="left")
-
-# Tìm tọa độ cạnh ngang thứ nhất
-horizontal_sum = np.sum(image_2, axis=1)
-first_column_index = np.argmax(horizontal_sum)
-
-# Nhận dạng MSSV
-processed_image_path = "Image/cv_inverted.png"
-processed_image = cv2.imread(processed_image_path)
-cropped_image = processed_image[0:first_column_index, :]
-plotting = plt.imshow(cropped_image, cmap='gray')
-plt.show()
-text = pytesseract.image_to_string(cropped_image, config=config)
-
-# Xuất DataFrame ra tệp CSV
-dataframe.to_csv("csv/text_extracted.csv", index=False, header=False)
-
-# In MSSV và kết quảD
 result = ""
 for i in range(len(dataframe)):
     if i == 0 or i == 2:
@@ -213,4 +214,8 @@ for i in range(len(dataframe)):
         else:
             result += "X"
 
-print(text, result)
+# Xuất DataFrame ra tệp CSV
+dataframe.to_csv("csv/text_extracted.csv", index=False, header=False)
+
+# In thông tin và kết quả
+print(ma_mon + "\n" + mssv + "\n" + result)
