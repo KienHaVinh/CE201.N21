@@ -224,3 +224,4 @@ dataframe.to_csv("csv/text_extracted.csv", index=False, header=False)
 
 # In thông tin và kết quả
 print(ma_mon + "\n" + mssv + "\n" + result)
+
